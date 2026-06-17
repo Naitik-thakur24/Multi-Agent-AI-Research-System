@@ -1,4 +1,52 @@
-import streamlit as st
+import streamlit as st  # <-- YEHSABSE PEHLE ADD KARO
+import os
+from dotenv import load_dotenv
+
+from langchain.agents import create_agent
+from langchain_mistralai import ChatMistralAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+from tools import web_search, scrape_url
+
+# Load environment variables (Local ke liye)
+load_dotenv()
+
+# =========================
+# API KEY LOADING FUNCTION (Cloud + Local)
+# =========================
+
+def get_api_key(key_name: str) -> str:
+    """
+    Pehle Streamlit secrets mein check karo (Cloud),
+    agar nahi mila toh environment variable mein check karo (Local)
+    """
+    # Cloud (Streamlit secrets)
+    try:
+        if hasattr(st, 'secrets') and key_name in st.secrets:
+            return st.secrets[key_name]
+    except:
+        pass
+    
+    # Local (Environment variable)
+    return os.getenv(key_name)
+
+# =========================
+# LLM Setup (Mistral)
+# =========================
+
+MISTRAL_API_KEY = get_api_key("MISTRAL_API_KEY")
+
+# Agar key nahi mili toh error show karo
+if not MISTRAL_API_KEY:
+    st.error("❌ MISTRAL_API_KEY not found! Please set it in Streamlit secrets.")
+    st.stop()
+
+llm = ChatMistralAI(
+    model="mistral-small-latest",
+    temperature=0,
+    api_key=MISTRAL_API_KEY  # <-- Ab function se key le raha hai
+)
 import time
 from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
 

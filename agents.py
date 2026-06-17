@@ -1,3 +1,4 @@
+import streamlit as st  # <-- SABSE PEHLE IMPORT
 import os
 from dotenv import load_dotenv
 
@@ -8,17 +9,40 @@ from langchain_core.output_parsers import StrOutputParser
 
 from tools import web_search, scrape_url
 
-# Load environment variables
+# Load environment variables (Local ke liye)
 load_dotenv()
+
+# =========================
+# API KEY HELPER FUNCTION
+# =========================
+
+def get_api_key(key_name: str) -> str:
+    """
+    API key load karega:
+    1. Pehle Streamlit secrets se (Cloud)
+    2. Agar nahi mila toh environment variable se (Local)
+    """
+    try:
+        if hasattr(st, 'secrets') and key_name in st.secrets:
+            return st.secrets[key_name]
+    except:
+        pass
+    
+    return os.getenv(key_name)
 
 # =========================
 # LLM Setup (Mistral)
 # =========================
 
+MISTRAL_API_KEY = get_api_key("MISTRAL_API_KEY")
+
+if not MISTRAL_API_KEY:
+    raise ValueError("❌ MISTRAL_API_KEY not found! Please set it in Streamlit secrets or .env file.")
+
 llm = ChatMistralAI(
     model="mistral-small-latest",
     temperature=0,
-    api_key=os.getenv("MISTRAL_API_KEY")
+    api_key=MISTRAL_API_KEY
 )
 
 # =========================
@@ -113,13 +137,11 @@ One line verdict:
 critic_chain = critic_prompt | llm | StrOutputParser()
 
 # =========================
-# Example Usage
+# Example Usage (Local Testing)
 # =========================
 
 if __name__ == "__main__":
-
     topic = "Artificial Intelligence in Healthcare"
-
     sample_research = """
     AI is transforming healthcare through diagnostic assistance,
     predictive analytics, personalized treatment recommendations,
@@ -130,7 +152,6 @@ if __name__ == "__main__":
     https://www.nih.gov
     """
 
-    # Generate Report
     report = writer_chain.invoke({
         "topic": topic,
         "research": sample_research
@@ -141,7 +162,6 @@ if __name__ == "__main__":
     print("=" * 50)
     print(report)
 
-    # Critique Report
     review = critic_chain.invoke({
         "report": report
     })
